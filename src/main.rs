@@ -10,6 +10,7 @@ use http::header::{HeaderMap, CONTENT_LENGTH, CONTENT_TYPE};
 use mimalloc::MiMalloc;
 use multipart_stream::Part;
 use std::sync::Arc;
+use std::ffi::OsStr;
 
 /// Default musl allocator is slow.
 #[global_allocator]
@@ -38,7 +39,15 @@ impl Data {
             loop {
                 for f in &*imgs {
                     let mut headers = HeaderMap::new();
-                    headers.insert(CONTENT_TYPE, mime::IMAGE_JPEG.as_ref().parse().unwrap());
+                    //TODO: switch statement based on image type.
+                    let fextension = f.extension().and_then(OsStr::to_str).unwrap();
+                    match fextension {
+                        "jpeg" =>headers.insert(CONTENT_TYPE, mime::IMAGE_JPEG.as_ref().parse().unwrap()),
+                        "png" =>headers.insert(CONTENT_TYPE, mime::IMAGE_PNG.as_ref().parse().unwrap()),
+                        "webp" =>headers.insert(CONTENT_TYPE, "image/webp".parse().unwrap()),
+                        _ =>headers.insert(CONTENT_TYPE, "image/*".parse().unwrap()),
+                    };
+                    // headers.insert(CONTENT_TYPE, mime::IMAGE_JPEG.as_ref().parse().unwrap());
                     let body = Bytes::from(std::fs::read(f)?);
                     headers.insert(CONTENT_LENGTH, body.len().into());
                     yield Part { headers, body };
